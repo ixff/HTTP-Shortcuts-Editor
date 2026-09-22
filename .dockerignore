@@ -1,0 +1,17 @@
+# Keep the Docker build context small and platform-independent:
+# node_modules must never be copied in (it contains host-specific binaries).
+node_modules
+dist
+
+.git
+.github
+.idea
+.vscode
+
+# Transient editor data, never bake into the image
+server/store
+
+tests
+*.log
+.env
+.env.*

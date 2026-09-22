@@ -34,6 +34,17 @@ npm start           # serves /editor/ and /editor/api/files on port 3000 (overri
 
 You might want to remove the `history: createWebHashHistory('/editor')` base from [the router config](src/router/index.ts) and the `base: '/editor/'` option from [the Vite config](vite.config.ts) if you want to host the web app at the domain root instead of the `/editor` subpath.
 
+### Docker
+
+The multi-stage [Dockerfile](Dockerfile) builds the web app and packages it together with the Node.js API server into a single image:
+
+```sh
+docker build -t http-shortcuts-editor .
+docker run -p 3000:3000 -v hse-store:/app/server/store http-shortcuts-editor
+```
+
+The editor is then available at `http://localhost:3000/editor/`. The volume at `/app/server/store` persists the temporary JSON files that the app pushes to the editor (omit the `-v` flag if you don't need persistence). Use `-e PORT=...` to change the listening port.
+
 ### API Server
 
 The API server accepts incoming `GET` and `POST` requests at `/editor/api/files`.
