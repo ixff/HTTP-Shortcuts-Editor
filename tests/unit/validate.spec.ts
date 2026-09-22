@@ -9,6 +9,7 @@ import {
 } from '@/model';
 import ValidationError from '@/store/errors/ValidationError';
 import { normalize, validate } from '@/store';
+import { replaceVariableKeysWithPlaceholders, replaceVariablePlaceholdersWithKeys } from '@/store/variables';
 
 function makeBase(): Base {
     const category = createNewCategory();
@@ -122,5 +123,89 @@ describe('normalize', () => {
         expect(result.categories[0].shortcuts[0].proxyHost).toBe('proxy.example.com');
         expect(result.categories[0].shortcuts[0].proxyPort).toBe(8080);
         expect((result.categories[0].shortcuts[0] as any).someNewFieldFromApp).toBe('keep-me');
+    });
+
+    it('fills in defaults for fields omitted by the app exporter', () => {
+        // Real exports omit default values: no executionType on HTTP shortcuts,
+        // no headers/parameters/username/code when empty, no variable type on
+        // constant variables, and a responseHandling object without id/uiType.
+        const data = {
+            categories: [{
+                id: 'c1',
+                name: 'Cat',
+                shortcuts: [{
+                    id: 's1',
+                    name: 'HTTP Shortcut',
+                    iconName: 'flat_color_lightbulb',
+                    method: 'GET',
+                    url: 'https://example.com',
+                    contentType: 'text/plain',
+                    bodyContent: '',
+                    responseHandling: { actions: ['rerun'], failureOutput: 'simple' },
+                }],
+            }],
+            version: 90,
+            variables: [{
+                id: 'v1',
+                key: 'constVar',
+                urlEncode: true,
+                isShareText: true,
+            }],
+            title: null,
+            globalCode: null,
+        } as unknown as Base;
+
+        const result = normalize(data);
+        const shortcut = result.categories[0].shortcuts[0];
+
+        // executionType missing => must default to a regular HTTP shortcut,
+        // otherwise all HTTP-only sections disappear from the UI
+        expect(shortcut.executionType).toBe('app');
+        expect(shortcut.description).toBe('');
+        expect(shortcut.username).toBe('');
+        expect(shortcut.password).toBe('');
+        expect(shortcut.codeOnPrepare).toBe('');
+        expect(shortcut.codeOnFailure).toBe('');
+        expect(shortcut.headers).toEqual([]);
+        expect(shortcut.parameters).toEqual([]);
+        expect(shortcut.proxyHost).toBeNull();
+        expect(shortcut.delay).toBe(0);
+        expect(shortcut.timeout).toBe(10000);
+        expect(shortcut.followRedirects).toBe(true);
+        expect(shortcut.responseHandling).not.toBeNull();
+        expect(shortcut.responseHandling?.id).toBe('');
+        expect(shortcut.responseHandling?.uiType).toBe('window');
+        expect(shortcut.responseHandling?.successOutput).toBe('response');
+        expect(shortcut.responseHandling?.failureOutput).toBe('simple');
+        expect(shortcut.responseHandling?.successMessage).toBe('');
+
+        const variable = result.variables[0];
+        expect(variable.type).toBe('constant');
+        expect(variable.value).toBe('');
+        expect(variable.options).toEqual([]);
+        // legacy bit flag derived from the app's newer isShareText field
+        expect(variable.flags).toBe(1);
+        expect((variable as any).isShareText).toBe(true);
+    });
+
+    it('produces data that survives the placeholder transformation', () => {
+        const data = {
+            categories: [{
+                id: 'c1',
+                name: 'Cat',
+                shortcuts: [{ id: 's1', name: 'Bare' }],
+            }],
+            version: 90,
+            variables: [],
+            title: null,
+            globalCode: null,
+        } as unknown as Base;
+
+        // Used to throw "Cannot read properties of undefined (reading 'replaceAll')"
+        // when the app omitted url/username/parameters/... fields
+        const loaded = replaceVariablePlaceholdersWithKeys(normalize(data));
+        expect(loaded.categories[0].shortcuts[0].url).toBe('');
+        const saved = replaceVariableKeysWithPlaceholders(loaded);
+        expect(saved.categories[0].shortcuts[0].headers).toEqual([]);
     });
 });

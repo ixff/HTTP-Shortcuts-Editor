@@ -1,8 +1,20 @@
 import { defineStore } from 'pinia';
 import {
+    AuthenticationMethod,
     Base,
+    CategoryLayoutType,
+    ExecutionType,
+    HttpMethod,
     ParameterType,
     RequestBodyType,
+    ResponseHandling,
+    ResponseHandlingFailureOutputType,
+    ResponseHandlingSuccessOutputType,
+    ResponseHandlingType,
+    RetryPolicy,
+    Shortcut,
+    Variable,
+    VariableType,
 } from '@/model';
 import ValidationError from '@/store/errors/ValidationError';
 import ApiError from '@/store/errors/ApiError';
@@ -38,17 +50,96 @@ async function makeApiRequest(
     throw new ApiError();
 }
 
+/**
+ * The app's exporter omits fields that hold their default value (and any null
+ * fields), e.g., there is no `executionType` on regular HTTP shortcuts, no
+ * `headers`/`parameters` when empty, no `username` without authentication and
+ * no `type` on constant variables. Fill in the editor's defaults for any
+ * missing fields so that the placeholder transformation and the UI always see
+ * a complete model. Explicit values (including unknown future fields) are
+ * preserved via spread.
+ */
+function normalizeResponseHandling(responseHandling: ResponseHandling | null | undefined): ResponseHandling | null {
+    if (!responseHandling) {
+        return null;
+    }
+    return {
+        ...responseHandling,
+        // Defaults as produced by the app when omitting default values
+        id: responseHandling.id ?? '',
+        uiType: responseHandling.uiType ?? ResponseHandlingType.WINDOW,
+        successOutput: responseHandling.successOutput ?? ResponseHandlingSuccessOutputType.RESPONSE,
+        failureOutput: responseHandling.failureOutput ?? ResponseHandlingFailureOutputType.DETAILED,
+        successMessage: responseHandling.successMessage ?? '',
+        includeMetaInfo: responseHandling.includeMetaInfo ?? false,
+    };
+}
+
+function normalizeShortcut(shortcut: Shortcut): Shortcut {
+    return {
+        ...shortcut,
+        // Defaults for everything the exporter may omit ...
+        executionType: shortcut.executionType ?? ExecutionType.APP,
+        description: shortcut.description ?? '',
+        method: shortcut.method ?? HttpMethod.GET,
+        url: shortcut.url ?? '',
+        authentication: shortcut.authentication ?? AuthenticationMethod.NONE,
+        username: shortcut.username ?? '',
+        password: shortcut.password ?? '',
+        authToken: shortcut.authToken ?? '',
+        contentType: shortcut.contentType ?? '',
+        bodyContent: shortcut.bodyContent ?? '',
+        requestBodyType: shortcut.requestBodyType ?? RequestBodyType.CUSTOM_TEXT,
+        codeOnPrepare: shortcut.codeOnPrepare ?? '',
+        codeOnSuccess: shortcut.codeOnSuccess ?? '',
+        codeOnFailure: shortcut.codeOnFailure ?? '',
+        launcherShortcut: shortcut.launcherShortcut ?? false,
+        quickSettingsTileShortcut: shortcut.quickSettingsTileShortcut ?? false,
+        retryPolicy: shortcut.retryPolicy ?? RetryPolicy.NONE,
+        followRedirects: shortcut.followRedirects ?? true,
+        acceptCookies: shortcut.acceptCookies ?? true,
+        acceptAllCertificates: shortcut.acceptAllCertificates ?? false,
+        parameters: shortcut.parameters ?? [],
+        headers: shortcut.headers ?? [],
+        wifiSsid: shortcut.wifiSsid ?? '',
+        delay: shortcut.delay ?? 0,
+        timeout: shortcut.timeout ?? 10_000,
+        // ... but normalize fields where null means "not set"
+        proxyHost: shortcut.proxyHost || null,
+        proxyPort: shortcut.proxyPort || null,
+        responseHandling: normalizeResponseHandling(shortcut.responseHandling),
+    };
+}
+
+function normalizeVariable(variable: Variable): Variable {
+    return {
+        ...variable,
+        type: variable.type ?? VariableType.CONSTANT,
+        value: variable.value ?? '',
+        options: variable.options ?? [],
+        rememberValue: variable.rememberValue ?? false,
+        urlEncode: variable.urlEncode ?? false,
+        jsonEncode: variable.jsonEncode ?? false,
+        data: variable.data ?? null,
+        title: variable.title ?? '',
+        // Older data uses a bit flag, newer app versions export `isShareText` instead
+        flags: variable.flags ?? ((variable as any).isShareText ? 1 : 0),
+    };
+}
+
 export function normalize(data: Base): Base {
     return {
         ...data,
-        categories: data.categories.map((category) => ({
+        title: data.title ?? null,
+        globalCode: data.globalCode ?? null,
+        categories: (data.categories ?? []).map((category) => ({
             ...category,
-            shortcuts: category.shortcuts.map((shortcut) => ({
-                ...shortcut,
-                proxyHost: shortcut.proxyHost || null,
-                proxyPort: shortcut.proxyPort || null,
-            })),
+            name: category.name ?? '',
+            hidden: category.hidden ?? false,
+            layoutType: category.layoutType ?? CategoryLayoutType.LINEAR_LIST,
+            shortcuts: (category.shortcuts ?? []).map(normalizeShortcut),
         })),
+        variables: (data.variables ?? []).map(normalizeVariable),
     };
 }
 
