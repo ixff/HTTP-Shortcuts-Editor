@@ -16,32 +16,23 @@
     </div>
 </template>
 
-<script>
-export default {
-    props: {
-        title: {
-            type: String,
-            required: true,
-        },
-        selectionOptions: {
-            type: Array,
-            required: true,
-        },
-        getOptionLabel: {
-            type: Function,
-            required: true,
-        },
-        getOptionId: {
-            type: Function,
-            default: (option) => option.id,
-        },
-    },
-    methods: {
-        onOptionSelected(option) {
-            this.$emit('option-selected', option);
-        },
-    },
-};
+<script setup lang="ts">
+withDefaults(defineProps<{
+    title: string;
+    selectionOptions: unknown[];
+    getOptionLabel: (option: any) => string;
+    getOptionId?: (option: any) => string | number;
+}>(), {
+    getOptionId: (option: any) => option?.id,
+});
+
+const emit = defineEmits<{
+    (e: 'option-selected', option: unknown): void;
+}>();
+
+function onOptionSelected(option: unknown) {
+    emit('option-selected', option);
+}
 </script>
 
 <style lang="sass" scoped>

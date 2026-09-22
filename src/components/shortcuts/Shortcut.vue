@@ -62,7 +62,7 @@
                 <with-variable-picker
                     v-if="usesUrl"
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.urlInput.insertAtCursor(text)"
+                    @insert-text="(text) => urlInput?.insertAtCursor(text)"
                 >
                     <text-input
                         ref="urlInput"
@@ -113,7 +113,7 @@
                 <with-variable-picker
                     v-if="usesCustomTextRequestBody"
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.bodyInput.insertAtCursor(text)"
+                    @insert-text="(text) => bodyInput?.insertAtCursor(text)"
                 >
                     <text-input
                         ref="bodyInput"
@@ -146,7 +146,7 @@
                 <with-variable-picker
                     v-if="usesUsernameAndPassword"
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.usernameInput.insertAtCursor(text)"
+                    @insert-text="(text) => usernameInput?.insertAtCursor(text)"
                 >
                     <text-input
                         ref="usernameInput"
@@ -158,7 +158,7 @@
                 <with-variable-picker
                     v-if="usesUsernameAndPassword"
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.passwordInput.insertAtCursor(text)"
+                    @insert-text="(text) => passwordInput?.insertAtCursor(text)"
                 >
                     <text-input
                         ref="passwordInput"
@@ -170,7 +170,7 @@
                 <with-variable-picker
                     v-if="usesAuthToken"
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.tokenInput.insertAtCursor(text)"
+                    @insert-text="(text) => tokenInput?.insertAtCursor(text)"
                 >
                     <text-input
                         ref="tokenInput"
@@ -181,7 +181,10 @@
                 </with-variable-picker>
             </form-section>
 
-            <form-section v-if="isRegularShortcut" title="Response Handling">
+            <form-section
+                v-if="isRegularShortcut && shortcutData.responseHandling"
+                title="Response Handling"
+            >
                 <select-input
                     v-model="shortcutData.responseHandling.successOutput"
                     label="On Success"
@@ -204,10 +207,10 @@
                 <with-variable-picker
                     v-if="usesSuccessMessage"
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.successMessageInput.insertAtCursor(text)"
+                    @insert-text="(text) => successMessageInput?.insertAtCursor(text)"
                 >
                     <text-input
-                        ref="successMessage"
+                        ref="successMessageInput"
                         v-model="shortcutData.responseHandling.successMessage"
                         label="Message"
                         placeholder="Shortcut executed."
@@ -246,14 +249,14 @@
             </form-section>
 
             <form-section v-if="usesScripting" title="Scripting">
-                <template slot="header">
+                <template #header>
                     See the <a href="https://http-shortcuts.rmy.ch/scripting" target="_blank">Scripting documentation</a> for more information.
                 </template>
                 <template>
                     <with-variable-picker
                         :variables="variables"
                         @variable-picked="
-                            (variable) => this.$refs.scriptPrepareInput.insertVariable(variable)
+                            (variable) => scriptPrepareInput?.insertVariable(variable)
                         "
                     >
                         <script-input
@@ -272,7 +275,7 @@
                         v-if="usesScriptingOnSuccess"
                         :variables="variables"
                         @variable-picked="
-                            (variable) => this.$refs.scriptSuccessInput.insertVariable(variable)
+                            (variable) => scriptSuccessInput?.insertVariable(variable)
                         "
                     >
                         <script-input
@@ -287,7 +290,7 @@
                         v-if="usesScriptingOnFailure"
                         :variables="variables"
                         @variable-picked="
-                            (variable) => this.$refs.scriptFailureInput.insertVariable(variable)
+                            (variable) => scriptFailureInput?.insertVariable(variable)
                         "
                     >
                         <script-input
@@ -311,12 +314,12 @@
                     label="Allow triggering via Quick Settings Tile"
                 />
                 <text-input
-                    :value="`${shortcutData.delay}`"
+                    :model-value="`${shortcutData.delay}`"
                     label="Delay (in milliseconds)"
                     type="number"
                     min="0"
                     max="600000"
-                    @input="(value) => {
+                    @update:model-value="(value) => {
                         shortcutData.delay = parseInt(value);
                     }"
                 />
@@ -324,8 +327,8 @@
 
             <form-section v-if="isRegularShortcut" title="Advanced Technical Settings">
                 <checkbox-input
-                    :value="isWaitForInternet"
-                    @input="
+                    :model-value="isWaitForInternet"
+                    @update:model-value="
                         (value) => shortcutData.retryPolicy = value
                             ? RetryPolicy.WAIT_FOR_INTERNET
                             : RetryPolicy.NONE
@@ -345,43 +348,42 @@
                     label="Accept any certificate (I know what I'm doing)"
                 />
                 <text-input
-                    :value="`${shortcutData.timeout}`"
+                    v-model="shortcutData.wifiSsid"
                     :label="$t('shortcuts.advancedSettings.wifiSsid.label')"
                     :placeholder="$t('shortcuts.advancedSettings.wifiSsid.placeholder')"
-                    v-model="shortcutData.wifiSsid"
                 />
                 <text-input
-                    :value="`${shortcutData.timeout}`"
+                    :model-value="`${shortcutData.timeout}`"
                     label="Timeout (in milliseconds)"
                     type="number"
                     min="500"
                     max="600000"
-                    @input="(value) => {
+                    @update:model-value="(value) => {
                         shortcutData.timeout = parseInt(value);
                     }"
                 />
                 <with-variable-picker
                     :variables="variables"
-                    @insert-text="(text) => this.$refs.proxyInput.insertAtCursor(text)"
+                    @insert-text="(text) => proxyInput?.insertAtCursor(text)"
                 >
                     <text-input
                         ref="proxyInput"
-                        :value="shortcutData.proxyHost || ''"
+                        :model-value="shortcutData.proxyHost || ''"
                         label="Proxy Hostname / IP Address"
                         placeholder="Enter the hostname or IP address of an HTTP proxy"
-                        @input="(value) => {
+                        @update:model-value="(value) => {
                             shortcutData.proxyHost = value.length > 0 ? value : null;
                         }"
                     />
                 </with-variable-picker>
                 <text-input
-                    :value="shortcutData.proxyPort ? `${shortcutData.proxyPort}` : ''"
+                    :model-value="shortcutData.proxyPort ? `${shortcutData.proxyPort}` : ''"
                     label="Proxy Port"
                     placeholder="Enter the port of the HTTP proxy"
                     type="number"
                     min="1"
                     max="65353"
-                    @input="(value) => {
+                    @update:model-value="(value) => {
                         shortcutData.proxyPort = value.length > 0 ? parseInt(value) : null;
                     }"
                 />
@@ -390,7 +392,8 @@
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import CheckboxInput from '@/components/form/CheckboxInput.vue';
 import Chevron from '@/components/basic/Chevron.vue';
 import FormSection from '@/components/form/FormSection.vue';
@@ -401,6 +404,7 @@ import ScriptInput from '@/components/form/ScriptInput.vue';
 import SelectInput from '@/components/form/SelectInput.vue';
 import TextInput from '@/components/form/TextInput.vue';
 import WithVariablePicker from '@/components/variables/WithVariablePicker.vue';
+import { useDialog } from '@/composables/dialog';
 import {
     AuthenticationMethod,
     ExecutionType,
@@ -410,179 +414,156 @@ import {
     ResponseHandlingFailureOutputType,
     ResponseHandlingSuccessOutputType,
     RetryPolicy,
+    type Header,
+    type Parameter,
+    type Shortcut,
+    type Variable,
 } from '@/model';
 
-export default {
-    components: {
-        CheckboxInput,
-        Chevron,
-        FormSection,
-        HeaderList,
-        Icon,
-        ParameterList,
-        ScriptInput,
-        SelectInput,
-        TextInput,
-        WithVariablePicker,
-    },
-    props: {
-        shortcut: {
-            type: Object,
-            required: true,
-        },
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            expanded: false,
-            shortcutData: { ...this.shortcut },
-            AuthenticationMethod,
-            HttpMethod,
-            RequestBodyType,
-            ResponseHandlingType,
-            ResponseHandlingFailureOutputType,
-            ResponseHandlingSuccessOutputType,
-            RetryPolicy,
-        };
-    },
-    watch: {
-        shortcutData: {
-            handler(newData) {
-                this.$emit('update:shortcut', newData);
-            },
-            deep: true,
-        },
-    },
-    computed: {
-        shortcutTitle() {
-            return this.shortcutData.name.length > 0
-                ? this.shortcutData.name
-                : '-';
-        },
-        shortcutTitleSuffix() {
-            switch (this.shortcut.executionType) {
-            case ExecutionType.BROWSER:
-                return '(Browser Shortcut)';
-            case ExecutionType.TRIGGER:
-                return '(Multi-Shortcut)';
-            case ExecutionType.SCRIPTING:
-                return '(Scripting Shortcut)';
-            default:
-                return null;
-            }
-        },
-        isRegularShortcut() {
-            return this.shortcutData.executionType === ExecutionType.APP;
-        },
-        isBrowserShortcut() {
-            return this.shortcutData.executionType === ExecutionType.BROWSER;
-        },
-        isScriptingShortcut() {
-            return this.shortcutData.executionType === ExecutionType.SCRIPTING;
-        },
-        usesUrl() {
-            return this.isRegularShortcut || this.isBrowserShortcut;
-        },
-        usesUsernameAndPassword() {
-            return this.isRegularShortcut
-                && (
-                    this.shortcutData.authentication === AuthenticationMethod.BASIC
-                        || this.shortcutData.authentication === AuthenticationMethod.DIGEST
-                );
-        },
-        usesAuthToken() {
-            return this.isRegularShortcut
-                && this.shortcutData.authentication === AuthenticationMethod.BEARER;
-        },
-        usesRequestBody() {
-            if (!this.isRegularShortcut) {
-                return false;
-            }
-            const { method } = this.shortcutData;
-            return method === HttpMethod.POST
-                || method === HttpMethod.PUT
-                || method === HttpMethod.DELETE
-                || method === HttpMethod.PATCH
-                || method === HttpMethod.OPTIONS;
-        },
-        usesCustomTextRequestBody() {
-            if (!this.isRegularShortcut) {
-                return false;
-            }
-            return this.shortcutData.requestBodyType === RequestBodyType.CUSTOM_TEXT;
-        },
-        usesParameters() {
-            if (!this.isRegularShortcut) {
-                return false;
-            }
-            return this.shortcutData.requestBodyType === RequestBodyType.FORM_DATA
-                || this.shortcutData.requestBodyType === RequestBodyType.X_WWW_FORM_URLENCODE;
-        },
-        usesDisplayType() {
-            if (!this.isRegularShortcut) {
-                return false;
-            }
-            const { responseHandling } = this.shortcutData;
-            return (
-                responseHandling.successOutput !== ResponseHandlingSuccessOutputType.NONE
-                || responseHandling.failureOutput !== ResponseHandlingFailureOutputType.NONE
-            );
-        },
-        usesSuccessMessage() {
-            if (!this.isRegularShortcut) {
-                return false;
-            }
-            const { responseHandling } = this.shortcutData;
-            return responseHandling.successOutput === ResponseHandlingSuccessOutputType.MESSAGE;
-        },
-        usesScripting() {
-            return this.shortcutData.executionType !== ExecutionType.TRIGGER;
-        },
-        usesScriptingOnSuccess() {
-            return this.isRegularShortcut;
-        },
-        usesScriptingOnFailure() {
-            return this.isRegularShortcut;
-        },
-        isWaitForInternet() {
-            return this.isRegularShortcut
-                && this.shortcutData.retryPolicy === RetryPolicy.WAIT_FOR_INTERNET;
-        },
-    },
-    methods: {
-        onUpdateHeaders(headers) {
-            this.$emit('update:shortcut', {
-                ...this.shortcut,
-                headers,
-            });
-        },
-        onUpdateParameters(parameters) {
-            this.$emit('update:shortcut', {
-                ...this.shortcut,
-                parameters,
-            });
-        },
-        toggle() {
-            this.expanded = !this.expanded;
-        },
-        onCopyClicked() {
-            this.$emit('copy', this.shortcutData);
-        },
-        async onDeleteClicked() {
-            try {
-                await this.$dialog.confirm('Delete this shortcut?', {
-                    okText: 'Delete',
-                });
-                this.$emit('delete', this.shortcutData);
-            } catch (e) {
-                // cancelled
-            }
-        },
-    },
-};
+const props = defineProps<{
+    shortcut: Shortcut;
+    variables: Variable[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:shortcut', shortcut: Shortcut): void;
+    (e: 'copy', shortcut: Shortcut): void;
+    (e: 'delete', shortcut: Shortcut): void;
+}>();
+
+const expanded = ref(false);
+const shortcutData = ref<Shortcut>({ ...props.shortcut });
+
+const urlInput = ref<InstanceType<typeof TextInput> | null>(null);
+const bodyInput = ref<InstanceType<typeof TextInput> | null>(null);
+const usernameInput = ref<InstanceType<typeof TextInput> | null>(null);
+const passwordInput = ref<InstanceType<typeof TextInput> | null>(null);
+const tokenInput = ref<InstanceType<typeof TextInput> | null>(null);
+const successMessageInput = ref<InstanceType<typeof TextInput> | null>(null);
+const proxyInput = ref<InstanceType<typeof TextInput> | null>(null);
+const scriptPrepareInput = ref<InstanceType<typeof ScriptInput> | null>(null);
+const scriptSuccessInput = ref<InstanceType<typeof ScriptInput> | null>(null);
+const scriptFailureInput = ref<InstanceType<typeof ScriptInput> | null>(null);
+
+const dialog = useDialog();
+
+watch(shortcutData, (newData) => {
+    emit('update:shortcut', newData);
+}, { deep: true });
+
+const shortcutTitle = computed(() => (shortcutData.value.name.length > 0
+    ? shortcutData.value.name
+    : '-'));
+
+const shortcutTitleSuffix = computed(() => {
+    switch (props.shortcut.executionType) {
+    case ExecutionType.BROWSER:
+        return '(Browser Shortcut)';
+    case ExecutionType.TRIGGER:
+        return '(Multi-Shortcut)';
+    case ExecutionType.SCRIPTING:
+        return '(Scripting Shortcut)';
+    default:
+        return null;
+    }
+});
+
+const isRegularShortcut = computed(
+    () => shortcutData.value.executionType === ExecutionType.APP,
+);
+const isBrowserShortcut = computed(
+    () => shortcutData.value.executionType === ExecutionType.BROWSER,
+);
+const isScriptingShortcut = computed(
+    () => shortcutData.value.executionType === ExecutionType.SCRIPTING,
+);
+const usesUrl = computed(() => isRegularShortcut.value || isBrowserShortcut.value);
+const usesUsernameAndPassword = computed(() => isRegularShortcut.value
+    && (
+        shortcutData.value.authentication === AuthenticationMethod.BASIC
+            || shortcutData.value.authentication === AuthenticationMethod.DIGEST
+    ));
+const usesAuthToken = computed(() => isRegularShortcut.value
+    && shortcutData.value.authentication === AuthenticationMethod.BEARER);
+const usesRequestBody = computed(() => {
+    if (!isRegularShortcut.value) {
+        return false;
+    }
+    const { method } = shortcutData.value;
+    return method === HttpMethod.POST
+        || method === HttpMethod.PUT
+        || method === HttpMethod.DELETE
+        || method === HttpMethod.PATCH
+        || method === HttpMethod.OPTIONS;
+});
+const usesCustomTextRequestBody = computed(() => {
+    if (!isRegularShortcut.value) {
+        return false;
+    }
+    return shortcutData.value.requestBodyType === RequestBodyType.CUSTOM_TEXT;
+});
+const usesParameters = computed(() => {
+    if (!isRegularShortcut.value) {
+        return false;
+    }
+    return shortcutData.value.requestBodyType === RequestBodyType.FORM_DATA
+        || shortcutData.value.requestBodyType === RequestBodyType.X_WWW_FORM_URLENCODE;
+});
+const usesDisplayType = computed(() => {
+    if (!isRegularShortcut.value || !shortcutData.value.responseHandling) {
+        return false;
+    }
+    const { responseHandling } = shortcutData.value;
+    return (
+        responseHandling.successOutput !== ResponseHandlingSuccessOutputType.NONE
+        || responseHandling.failureOutput !== ResponseHandlingFailureOutputType.NONE
+    );
+});
+const usesSuccessMessage = computed(() => {
+    if (!isRegularShortcut.value || !shortcutData.value.responseHandling) {
+        return false;
+    }
+    return shortcutData.value.responseHandling.successOutput
+        === ResponseHandlingSuccessOutputType.MESSAGE;
+});
+const usesScripting = computed(
+    () => shortcutData.value.executionType !== ExecutionType.TRIGGER,
+);
+const usesScriptingOnSuccess = computed(() => isRegularShortcut.value);
+const usesScriptingOnFailure = computed(() => isRegularShortcut.value);
+const isWaitForInternet = computed(() => isRegularShortcut.value
+    && shortcutData.value.retryPolicy === RetryPolicy.WAIT_FOR_INTERNET);
+
+function onUpdateHeaders(headers: Header[]) {
+    emit('update:shortcut', {
+        ...shortcutData.value,
+        headers,
+    });
+}
+
+function onUpdateParameters(parameters: Parameter[]) {
+    emit('update:shortcut', {
+        ...shortcutData.value,
+        parameters,
+    });
+}
+
+function toggle() {
+    expanded.value = !expanded.value;
+}
+
+function onCopyClicked() {
+    emit('copy', shortcutData.value);
+}
+
+async function onDeleteClicked() {
+    try {
+        await dialog.confirm('Delete this shortcut?', { okText: 'Delete' });
+        emit('delete', shortcutData.value);
+    } catch (e) {
+        // cancelled
+    }
+}
 </script>
 
 <style lang="sass" scoped>

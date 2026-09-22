@@ -5,10 +5,9 @@
             :id="id"
             ref="input"
             class="input__value multiline"
-            :value="value"
+            :value="modelValue"
             v-bind="$attrs"
             :placeholder="placeholder"
-            contenteditable
             @input="onInput"
         />
         <input
@@ -16,73 +15,78 @@
             :id="id"
             ref="input"
             class="input__value"
-            :value="value"
+            :value="modelValue"
             v-bind="$attrs"
             :placeholder="placeholder"
-            contenteditable
             @input="onInput"
         >
     </labelled>
 </template>
 
-<script>
-import { v4 as uuidv4 } from 'uuid';
+<script lang="ts">
+export default {
+    inheritAttrs: false,
+};
+</script>
+
+<script setup lang="ts">
+import { ref } from 'vue';
 import Labelled from '@/components/form/Labelled.vue';
 
-export default {
-    components: {
-        Labelled,
-    },
-    props: {
-        label: {
-            type: String,
-            default: null,
-        },
-        value: {
-            type: String,
-            default: null,
-        },
-        placeholder: {
-            type: String,
-            default: '',
-        },
-        multiline: {
-            type: Boolean,
-        },
-    },
-    data() {
-        return {
-            id: null,
-        };
-    },
-    mounted() {
-        this.id = uuidv4();
-    },
-    methods: {
-        focus() {
-            this.$refs.input.focus();
-        },
-        onInput(event) {
-            this.$emit('input', event.target.value);
-        },
-        insertAtCursor(text) {
-            const { input } = this.$refs;
-            if (input.selectionStart || input.selectionStart === 0) {
-                const startPos = input.selectionStart;
-                const endPos = input.selectionEnd;
-                input.value = input.value.substring(0, startPos)
-                    + text
-                    + input.value.substring(endPos, input.value.length);
-                input.selectionStart = startPos + text.length;
-                input.selectionEnd = startPos + text.length;
-            } else {
-                input.value += text;
-            }
-            this.$emit('input', this.$refs.input.value);
-            this.$refs.input.focus();
-        },
-    },
-};
+withDefaults(defineProps<{
+    label?: string | null;
+    modelValue?: string | null;
+    placeholder?: string;
+    multiline?: boolean;
+}>(), {
+    label: null,
+    modelValue: '',
+    placeholder: '',
+    multiline: false,
+});
+
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: string): void;
+}>();
+
+const input = ref<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+function onInput(event: Event) {
+    emit('update:modelValue', (event.target as HTMLInputElement).value);
+}
+
+function focus() {
+    input.value?.focus();
+}
+
+/**
+ * Inserts the given text at the current cursor position,
+ * replacing any selected text.
+ */
+function insertAtCursor(text: string) {
+    const element = input.value;
+    if (!element) {
+        return;
+    }
+    const { selectionStart, selectionEnd } = element;
+    if (selectionStart !== null && selectionStart !== undefined) {
+        const end = selectionEnd ?? selectionStart;
+        element.value = element.value.substring(0, selectionStart)
+            + text
+            + element.value.substring(end, element.value.length);
+        element.selectionStart = selectionStart + text.length;
+        element.selectionEnd = selectionStart + text.length;
+    } else {
+        element.value += text;
+    }
+    emit('update:modelValue', element.value);
+    element.focus();
+}
+
+defineExpose({
+    focus,
+    insertAtCursor,
+});
 </script>
 
 <style lang="sass" scoped>

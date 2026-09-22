@@ -19,7 +19,7 @@
         <div v-if="expanded" class="parameter__form">
             <with-variable-picker
                 :variables="variables"
-                @insert-text="(text) => this.$refs.keyInput.insertAtCursor(text)"
+                @insert-text="(text) => keyInput?.insertAtCursor(text)"
             >
                 <text-input
                     ref="keyInput"
@@ -31,7 +31,7 @@
             <with-variable-picker
                 v-if="parameterData.type === ParameterType.STRING"
                 :variables="variables"
-                @insert-text="(text) => this.$refs.valueInput.insertAtCursor(text)"
+                @insert-text="(text) => valueInput?.insertAtCursor(text)"
             >
                 <text-input
                     ref="valueInput"
@@ -50,78 +50,62 @@
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import Chevron from '@/components/basic/Chevron.vue';
 import Icon from '@/components/basic/Icon.vue';
 import TextInput from '@/components/form/TextInput.vue';
 import WithVariablePicker from '@/components/variables/WithVariablePicker.vue';
-import { ParameterType } from '@/model';
+import { ParameterType, type Parameter, type Variable } from '@/model';
+import { useDialog } from '@/composables/dialog';
 
-export default {
-    components: {
-        Chevron,
-        Icon,
-        TextInput,
-        WithVariablePicker,
-    },
-    props: {
-        parameter: {
-            type: Object,
-            required: true,
-        },
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            expanded: false,
-            parameterData: { ...this.parameter },
-            ParameterType,
-        };
-    },
-    watch: {
-        parameterData: {
-            handler(newData) {
-                this.$emit('update:parameter', newData);
-            },
-            deep: true,
-        },
-    },
-    computed: {
-        parameterTitle() {
-            return this.parameterData.key.length > 0
-                ? `${this.parameterData.key}: ${this.parameterValue}`
-                : '-';
-        },
-        parameterValue() {
-            switch (this.parameterData.type) {
-            case ParameterType.FILE:
-                return '(File)';
-            case ParameterType.FILES:
-                return '(Files)';
-            default:
-                return this.parameterData.value;
-            }
-        },
-    },
-    methods: {
-        toggle() {
-            this.expanded = !this.expanded;
-        },
-        async onDeleteClicked() {
-            try {
-                await this.$dialog.confirm('Delete this parameter?', {
-                    okText: 'Delete',
-                });
-                this.$emit('delete', this.parameterData);
-            } catch (e) {
-                // cancelled
-            }
-        },
-    },
-};
+const props = defineProps<{
+    parameter: Parameter;
+    variables: Variable[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:parameter', parameter: Parameter): void;
+    (e: 'delete', parameter: Parameter): void;
+}>();
+
+const expanded = ref(false);
+const parameterData = ref<Parameter>({ ...props.parameter });
+const keyInput = ref<InstanceType<typeof TextInput> | null>(null);
+const valueInput = ref<InstanceType<typeof TextInput> | null>(null);
+const dialog = useDialog();
+
+watch(parameterData, (newData) => {
+    emit('update:parameter', newData);
+}, { deep: true });
+
+const parameterTitle = computed(() => (parameterData.value.key.length > 0
+    ? `${parameterData.value.key}: ${parameterValue.value}`
+    : '-'));
+
+const parameterValue = computed(() => {
+    switch (parameterData.value.type) {
+    case ParameterType.FILE:
+        return '(File)';
+    case ParameterType.FILES:
+        return '(Files)';
+    default:
+        return parameterData.value.value;
+    }
+});
+
+function toggle() {
+    expanded.value = !expanded.value;
+}
+
+async function onDeleteClicked() {
+    try {
+        await dialog.confirm('Delete this parameter?', { okText: 'Delete' });
+        emit('delete', parameterData.value);
+    } catch (e) {
+        // cancelled
+    }
+}
 </script>
 
 <style lang="sass" scoped>

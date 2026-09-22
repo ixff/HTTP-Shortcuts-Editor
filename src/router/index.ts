@@ -1,11 +1,8 @@
-import Vue from 'vue';
-import VueRouter, { RouteConfig } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import HomePage from '@/views/HomePage.vue';
 import EditorPage from '@/views/EditorPage.vue';
 
-Vue.use(VueRouter);
-
-const routes: Array<RouteConfig> = [
+const routes = [
     {
         path: '/',
         name: 'Home',
@@ -18,8 +15,10 @@ const routes: Array<RouteConfig> = [
     },
 ];
 
-const router = new VueRouter({
-    base: '/editor',
+const router = createRouter({
+    // Hash history under the `/editor` sub-path; remove the base argument
+    // here if you want to host the web app at the domain root instead.
+    history: createWebHashHistory('/editor'),
     routes,
 });
 

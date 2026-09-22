@@ -94,6 +94,7 @@ export enum RequestBodyType {
 export interface Shortcut {
     id: string;
     name: string;
+    description: string;
     iconName: string | null;
     executionType: ExecutionType;
     method: HttpMethod;
@@ -120,6 +121,15 @@ export interface Shortcut {
     parameters: Parameter[];
     headers: Header[];
     wifiSsid: string;
+    delay: number;
+    timeout: number;
+
+    /**
+     * Fields that this editor does not know about (yet), e.g., newer fields
+     * added by the HTTP Shortcuts app. They are preserved as-is on load & save
+     * so that no data is lost when round-tripping through this editor.
+     */
+    [unknownField: string]: unknown;
 }
 
 export interface Category {
@@ -128,6 +138,8 @@ export interface Category {
     shortcuts: Shortcut[];
     hidden: boolean;
     layoutType: CategoryLayoutType;
+
+    [unknownField: string]: unknown;
 }
 
 export enum VariableType {
@@ -161,6 +173,8 @@ export interface Variable {
     data: string | null;
     flags: number;
     title: string;
+
+    [unknownField: string]: unknown;
 }
 
 export interface Base {
@@ -169,6 +183,8 @@ export interface Base {
     variables: Variable[];
     title: string | null;
     globalCode: string | null;
+
+    [unknownField: string]: unknown;
 }
 
 export function cloneShortcut(shortcut: Shortcut): Shortcut {
@@ -194,6 +210,7 @@ export function createNewShortcut(type: ExecutionType): Shortcut {
     return {
         id: uuidv4(),
         name: '',
+        description: '',
         iconName: 'flat_color_lightbulb',
         executionType: type,
         method: HttpMethod.GET,
@@ -227,6 +244,8 @@ export function createNewShortcut(type: ExecutionType): Shortcut {
         parameters: [],
         headers: [],
         wifiSsid: '',
+        delay: 0,
+        timeout: 10_000,
     };
 }
 

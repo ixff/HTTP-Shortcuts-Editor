@@ -1,5 +1,5 @@
 <template>
-    <form class="init-form">
+    <form class="init-form" @submit.prevent="onSubmit">
         <label for="device-id-input">
             Device ID
         </label>
@@ -22,55 +22,50 @@
             @input="onInput"
         >
         <button
+            type="submit"
             :disabled="!canSubmit"
-            @click="onSubmit"
         >Start Editing</button>
 
         <span v-if="hasError" class="init-form__error">{{ error }}</span>
     </form>
 </template>
 
-<script>
-export default {
-    props: {
-        initialDeviceId: {
-            type: String,
-            default: '',
-        },
-        isLoading: {
-            type: Boolean,
-        },
-        error: {
-            type: String,
-            default: '',
-        },
-    },
-    data() {
-        return {
-            deviceId: this.initialDeviceId,
-            password: '',
-        };
-    },
-    computed: {
-        hasError() {
-            return this.error.length > 0;
-        },
-        canSubmit() {
-            return !this.isLoading && this.deviceId.length && this.password.length;
-        },
-    },
-    methods: {
-        onInput() {
-            this.$emit('change');
-        },
-        onSubmit() {
-            this.$emit('submit', {
-                deviceId: this.deviceId,
-                password: this.password,
-            });
-        },
-    },
-};
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+
+const props = withDefaults(defineProps<{
+    initialDeviceId?: string;
+    isLoading?: boolean;
+    error?: string;
+}>(), {
+    initialDeviceId: '',
+    isLoading: false,
+    error: '',
+});
+
+const emit = defineEmits<{
+    (e: 'submit', credentials: { deviceId: string; password: string }): void;
+    (e: 'change'): void;
+}>();
+
+const deviceId = ref(props.initialDeviceId);
+const password = ref('');
+
+const hasError = computed(() => props.error.length > 0);
+const canSubmit = computed(
+    () => !props.isLoading && deviceId.value.length > 0 && password.value.length > 0,
+);
+
+function onInput() {
+    emit('change');
+}
+
+function onSubmit() {
+    emit('submit', {
+        deviceId: deviceId.value,
+        password: password.value,
+    });
+}
 </script>
 
 <style lang="sass" scoped>

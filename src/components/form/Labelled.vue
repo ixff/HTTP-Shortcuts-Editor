@@ -3,37 +3,21 @@
         <label v-if="label" :for="id" class="input__label">
             {{ label }}
         </label>
-        <slot :id="id" @input="onInput" />
+        <slot :id="id" />
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { v4 as uuidv4 } from 'uuid';
+import { ref } from 'vue';
 
-export default {
-    props: {
-        label: {
-            type: String,
-            default: '',
-        },
-    },
-    data() {
-        return {
-            id: null,
-        };
-    },
-    mounted() {
-        this.id = uuidv4();
-    },
-    methods: {
-        focus() {
-            this.$refs.input.focus();
-        },
-        onInput(event) {
-            this.$emit('input', event.target.value);
-        },
-    },
-};
+withDefaults(defineProps<{
+    label?: string | null;
+}>(), {
+    label: null,
+});
+
+const id = ref<string>(uuidv4());
 </script>
 
 <style lang="sass" scoped>

@@ -1,25 +1,19 @@
 <template>
-    <div class="icon" v-on="$listeners">
+    <div class="icon">
         <div class="icon__icon" :style="style" />
     </div>
 </template>
 
-<script>
-export default {
-    props: {
-        name: {
-            type: String,
-            required: true,
-        },
-    },
-    computed: {
-        style() {
-            return {
-                'background-image': `url('assets/icons/${this.name}.svg')`,
-            };
-        },
-    },
-};
+<script setup lang="ts">
+import { computed } from 'vue';
+
+const props = defineProps<{
+    name: string;
+}>();
+
+const style = computed(() => ({
+    'background-image': `url('assets/icons/${props.name}.svg')`,
+}));
 </script>
 
 <style lang="sass" scoped>

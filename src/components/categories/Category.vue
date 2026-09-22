@@ -23,7 +23,6 @@
         </div>
         <div v-if="expanded" class="category__form">
             <text-input
-                v-if="expanded"
                 v-model="categoryData.name"
                 :label="$t('categories.name.label')"
                 :placeholder="$t('categories.name.placeholder')"
@@ -44,16 +43,17 @@
             />
             <labelled :label="$t('categories.shortcuts.label')">
                 <shortcut-list
-                    :shortcuts="category.shortcuts"
+                    :shortcuts="categoryData.shortcuts"
                     :variables="variables"
-                    @update:shortcuts="onUpdate"
+                    @update:shortcuts="onUpdateShortcuts"
                 />
             </labelled>
         </div>
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import CheckboxInput from '@/components/form/CheckboxInput.vue';
 import Chevron from '@/components/basic/Chevron.vue';
 import Labelled from '@/components/form/Labelled.vue';
@@ -61,73 +61,55 @@ import Icon from '@/components/basic/Icon.vue';
 import SelectInput from '@/components/form/SelectInput.vue';
 import ShortcutList from '@/components/shortcuts/ShortcutList.vue';
 import TextInput from '@/components/form/TextInput.vue';
+import { useDialog } from '@/composables/dialog';
+import { useI18n } from 'vue-i18n';
+import type { Category, Shortcut, Variable } from '@/model';
 
-export default {
-    components: {
-        CheckboxInput,
-        Chevron,
-        Labelled,
-        Icon,
-        SelectInput,
-        ShortcutList,
-        TextInput,
-    },
-    props: {
-        category: {
-            type: Object,
-            required: true,
-        },
-        allowDeletion: {
-            type: Boolean,
-        },
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            expanded: false,
-            categoryData: { ...this.category },
-        };
-    },
-    watch: {
-        categoryData: {
-            handler(newData) {
-                this.$emit('update:category', newData);
-            },
-            deep: true,
-        },
-    },
-    computed: {
-        categoryTitle() {
-            return this.categoryData.name.length > 0
-                ? this.categoryData.name
-                : '-';
-        },
-    },
-    methods: {
-        onUpdate(shortcuts) {
-            this.$emit('update:category', {
-                ...this.category,
-                shortcuts,
-            });
-        },
-        toggle() {
-            this.expanded = !this.expanded;
-        },
-        async onDeleteClicked() {
-            try {
-                await this.$dialog.confirm(this.$t('categories.delete.prompt'), {
-                    okText: this.$t('common.dialogButtons.delete'),
-                });
-                this.$emit('delete', this.categoryData);
-            } catch (e) {
-                // cancelled
-            }
-        },
-    },
-};
+const props = defineProps<{
+    category: Category;
+    allowDeletion?: boolean;
+    variables: Variable[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:category', category: Category): void;
+    (e: 'delete', category: Category): void;
+}>();
+
+const { t } = useI18n();
+const expanded = ref(false);
+const categoryData = ref<Category>({ ...props.category });
+const dialog = useDialog();
+
+watch(categoryData, (newData) => {
+    emit('update:category', newData);
+}, { deep: true });
+
+const categoryTitle = computed(() => (categoryData.value.name.length > 0
+    ? categoryData.value.name
+    : '-'));
+
+function onUpdateShortcuts(shortcuts: Shortcut[]) {
+    categoryData.value = {
+        ...categoryData.value,
+        shortcuts,
+    };
+}
+
+function toggle() {
+    expanded.value = !expanded.value;
+}
+
+async function onDeleteClicked() {
+    try {
+        await dialog.confirm(t('categories.delete.prompt'), {
+            okText: t('common.dialogButtons.delete'),
+        });
+        emit('delete', categoryData.value);
+    } catch (e) {
+        // cancelled
+    }
+}
 </script>
 
 <style lang="sass" scoped>

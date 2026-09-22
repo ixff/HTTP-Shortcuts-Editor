@@ -4,35 +4,45 @@ This editor allows editing shortcuts from the [HTTP Shortcuts](https://github.co
 
 It is deployed here: [http-shortcuts.rmy.ch/editor](https://http-shortcuts.rmy.ch/editor)
 
+## Tech Stack
+
+- **Frontend**: Vue 3 (Composition API) + TypeScript + Vite + Pinia + vue-router (hash mode) + CodeMirror 6 + vue-i18n
+- **Backend**: Node.js + TypeScript ([Hono](https://honojs.dev/)), replacing the previous single-file PHP backend
+- **Tests**: Vitest
+
 ## Project Setup
 
-### Web App
-
-If you want to host your own version of it, you can run the following commands and host the contents of the `dist` directory.
-
-```
-yarn install
-yarn build
+```sh
+npm install
+npm run build     # build the web app into dist/
+npm run test:unit # run the unit tests
 ```
 
-or for local development
+For local development, run the backend and the Vite dev server in two terminals:
 
-```
-yarn serve
+```sh
+npm run dev:server  # API + static hosting on http://localhost:3000
+npm run dev         # Vite dev server, proxies /editor/api/files to the backend
 ```
 
-You might want to remove [this line](src/router/index.ts#L22) from the router config file if you want to host the web app at the domain root instead of the `/editor` subpath.
+For production, a single process serves both the built web app and the API:
+
+```sh
+npm run build
+npm start           # serves /editor/ and /editor/api/files on port 3000 (override with PORT)
+```
+
+You might want to remove the `history: createWebHashHistory('/editor')` base from [the router config](src/router/index.ts) and the `base: '/editor/'` option from [the Vite config](vite.config.ts) if you want to host the web app at the domain root instead of the `/editor` subpath.
 
 ### API Server
 
-The API server is currently just [a single PHP](public/api/files/index.php) file which accepts incoming `GET` and `POST` requests at `/api/files`.
+The API server accepts incoming `GET` and `POST` requests at `/editor/api/files`.
 It uses HTTP Basic Auth where the username is the device ID (as shown inside the HTTP Shortcuts app).
-
-If PHP is not your cup of tea, I understand. I went with it because it was easier for me to host. Feel free to rewrite it in Node or Flask or whatever suits you, there's no magic in it.
+Uploaded data is stored as temporary JSON files named after `md5(deviceId:password)` under `server/store/` and is automatically deleted after 2 hours of inactivity, mirroring the behavior of the original PHP backend.
 
 ## Acknowledgements
 
 This project uses
 - [Vue.Draggable](https://github.com/SortableJS/Vue.Draggable) (MIT License)
-- [Vue Prism Editor](https://github.com/koca/vue-prism-editor) (MIT License)
-- [Vuejs Dialog Plugin](https://github.com/Godofbrowser/vuejs-dialog) (MIT License)
+- [CodeMirror](https://codemirror.net/) (MIT License)
+- [Hono](https://honojs.dev/) (MIT License)

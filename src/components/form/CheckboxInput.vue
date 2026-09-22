@@ -4,49 +4,50 @@
             :id="id"
             ref="input"
             class="input__value"
-            :checked="value"
+            :checked="modelValue"
             v-bind="$attrs"
             value="1"
             type="checkbox"
-            @input="onInput"
+            @change="onChange"
         >
     </labelled>
 </template>
 
-<script>
-import { v4 as uuidv4 } from 'uuid';
+<script lang="ts">
+export default {
+    inheritAttrs: false,
+};
+</script>
+
+<script setup lang="ts">
+import { ref } from 'vue';
 import Labelled from '@/components/form/Labelled.vue';
 
-export default {
-    components: {
-        Labelled,
-    },
-    props: {
-        label: {
-            type: String,
-            default: null,
-        },
-        value: {
-            type: Boolean,
-        },
-    },
-    data() {
-        return {
-            id: null,
-        };
-    },
-    mounted() {
-        this.id = uuidv4();
-    },
-    methods: {
-        focus() {
-            this.$refs.input.focus();
-        },
-        onInput(event) {
-            this.$emit('input', event.target.checked);
-        },
-    },
-};
+withDefaults(defineProps<{
+    label?: string | null;
+    modelValue?: boolean;
+}>(), {
+    label: null,
+    modelValue: false,
+});
+
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: boolean): void;
+}>();
+
+const input = ref<HTMLInputElement | null>(null);
+
+function onChange(event: Event) {
+    emit('update:modelValue', (event.target as HTMLInputElement).checked);
+}
+
+function focus() {
+    input.value?.focus();
+}
+
+defineExpose({
+    focus,
+});
 </script>
 
 <style lang="sass" scoped>
@@ -63,7 +64,7 @@ export default {
     &::placeholder
         color: #666666
 
-.label::v-deep .input__label
+.label:deep(.input__label)
     display: inline-block
     margin-left: 6px
 </style>

@@ -2,19 +2,20 @@
     <div class="variable-list">
         <draggable
             v-model="variablesData"
+            item-key="id"
             group="variables"
             handle=".variable__header__drag-handle"
         >
-            <variable
-                v-for="variable in variablesData"
-                :key="variable.id"
-                :variable="variable"
-                :variables="variables"
-                class="variable-list__item"
-                @update:variable="onUpdate"
-                @delete="onDelete"
-            />
-            <template slot="footer">
+            <template #item="{ element }">
+                <variable
+                    :variable="element"
+                    :variables="variables"
+                    class="variable-list__item"
+                    @update:variable="onUpdate"
+                    @delete="onDelete"
+                />
+            </template>
+            <template #footer>
                 <div v-if="variablesData.length === 0" class="empty-state">
                     No variables defined
                 </div>
@@ -30,48 +31,40 @@
     </div>
 </template>
 
-<script>
-import Variable from '@/components/variables/Variable.vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 import draggable from 'vuedraggable';
+import Variable from '@/components/variables/Variable.vue';
 import StyledButton from '@/components/basic/StyledButton.vue';
-import { createNewVariable } from '@/model';
+import { createNewVariable, type Variable as VariableModel } from '@/model';
 
-export default {
-    components: {
-        Variable,
-        draggable,
-        StyledButton,
-    },
-    props: {
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            variablesData: [...this.variables],
-        };
-    },
-    watch: {
-        variablesData(newData) {
-            this.$emit('update:variables', newData);
-        },
-    },
-    methods: {
-        onUpdate(variable) {
-            this.variablesData = this.variablesData.map(
-                (s) => (s.id === variable.id ? variable : s),
-            );
-        },
-        onDelete(variable) {
-            this.variablesData = this.variablesData.filter((s) => s.id !== variable.id);
-        },
-        async addNewVariable() {
-            this.variablesData.push(createNewVariable());
-        },
-    },
-};
+const props = defineProps<{
+    variables: VariableModel[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:variables', variables: VariableModel[]): void;
+}>();
+
+const variablesData = ref<VariableModel[]>([...props.variables]);
+
+watch(variablesData, (newData) => {
+    emit('update:variables', newData);
+}, { deep: true });
+
+function onUpdate(variable: VariableModel) {
+    variablesData.value = variablesData.value.map(
+        (v) => (v.id === variable.id ? variable : v),
+    );
+}
+
+function onDelete(variable: VariableModel) {
+    variablesData.value = variablesData.value.filter((v) => v.id !== variable.id);
+}
+
+function addNewVariable() {
+    variablesData.value.push(createNewVariable());
+}
 </script>
 
 <style lang="sass" scoped>

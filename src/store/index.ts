@@ -1,5 +1,4 @@
-import Vue from 'vue';
-import Vuex from 'vuex';
+import { defineStore } from 'pinia';
 import {
     Base,
     ParameterType,
@@ -11,16 +10,14 @@ import {
     replaceVariableKeysWithPlaceholders,
     replaceVariablePlaceholdersWithKeys,
 } from '@/store/variables';
-import i18next from 'i18next';
-
-Vue.use(Vuex);
+import i18n from '@/i18n';
 
 const REQUIRED_MIN_VERSION = 43;
 const SUPPORTED_MAX_VERSION = 999;
 const LOCAL_STORAGE_DEVICE_ID = 'device_id';
 const API_PATH = 'api/files/';
 
-const $t = i18next.t.bind(i18next);
+const $t = i18n.global.t.bind(i18n.global);
 
 async function makeApiRequest(
     deviceId: string,
@@ -41,7 +38,7 @@ async function makeApiRequest(
     throw new ApiError();
 }
 
-function normalize(data: Base): Base {
+export function normalize(data: Base): Base {
     return {
         ...data,
         categories: data.categories.map((category) => ({
@@ -55,7 +52,7 @@ function normalize(data: Base): Base {
     };
 }
 
-function validate(data: Base) {
+export function validate(data: Base) {
     if (data.categories.every((category) => category.hidden)) {
         throw new ValidationError($t('validation.allCategoriesHidden'));
     }
@@ -106,83 +103,62 @@ function validate(data: Base) {
     }
 }
 
-export default new Vuex.Store({
-    state: {
+export const useStore = defineStore('main', {
+    state: () => ({
         deviceId: localStorage.getItem(LOCAL_STORAGE_DEVICE_ID) ?? '',
         password: '',
         data: null as Base | null,
         isLoading: false,
         isSaving: false,
         hasUnsavedChanges: false,
-    },
+    }),
     getters: {
         isLoaded(state): boolean {
             return !state.isLoading && !!state.data;
         },
     },
-    mutations: {
-        SET_DEVICE_ID(state, deviceId) {
-            state.deviceId = deviceId;
-            localStorage.setItem(LOCAL_STORAGE_DEVICE_ID, deviceId);
-        },
-        SET_PASSWORD(state, password) {
-            state.password = password;
-        },
-        SET_LOADING(state, isLoading) {
-            state.isLoading = isLoading;
-        },
-        SET_SAVING(state, isSaving) {
-            state.isSaving = isSaving;
-        },
-        SET_DATA(state, data) {
-            state.data = data;
-        },
-        SET_HAS_UNSAVED_CHANGES(state, hasUnsavedChanges) {
-            state.hasUnsavedChanges = hasUnsavedChanges;
-        },
-    },
     actions: {
-        setCredentials({ commit }, { deviceId, password }) {
-            commit('SET_DEVICE_ID', deviceId);
-            commit('SET_PASSWORD', password);
+        setCredentials(deviceId: string, password: string) {
+            this.deviceId = deviceId;
+            localStorage.setItem(LOCAL_STORAGE_DEVICE_ID, deviceId);
+            this.password = password;
         },
-        async loadData({ state, commit }) {
+        async loadData() {
             try {
-                commit('SET_LOADING', true);
+                this.isLoading = true;
                 const data = await makeApiRequest(
-                    state.deviceId,
-                    state.password,
+                    this.deviceId,
+                    this.password,
                 );
 
                 if (data.version < REQUIRED_MIN_VERSION || data.version > SUPPORTED_MAX_VERSION) {
                     throw new ValidationError($t('validation.incompatibleVersion'));
                 }
 
-                commit('SET_DATA', replaceVariablePlaceholdersWithKeys(normalize(data)));
-                commit('SET_HAS_UNSAVED_CHANGES', false);
+                this.data = replaceVariablePlaceholdersWithKeys(normalize(data));
+                this.hasUnsavedChanges = false;
             } finally {
-                commit('SET_LOADING', false);
+                this.isLoading = false;
             }
         },
-        setData({ commit }, data) {
-            commit('SET_DATA', data);
-            commit('SET_HAS_UNSAVED_CHANGES', true);
+        setData(data: Base) {
+            this.data = data;
+            this.hasUnsavedChanges = true;
         },
-        async saveData({ state, commit }) {
-            commit('SET_SAVING', true);
+        async saveData() {
+            this.isSaving = true;
             try {
-                const base = state.data as Base;
+                const base = this.data as Base;
                 validate(base);
-                const data = await makeApiRequest(
-                    state.deviceId,
-                    state.password,
+                await makeApiRequest(
+                    this.deviceId,
+                    this.password,
                     'post',
                     replaceVariableKeysWithPlaceholders(base),
                 );
-                commit('SET_HAS_UNSAVED_CHANGES', false);
-                return data.updatedShortcuts;
+                this.hasUnsavedChanges = false;
             } finally {
-                commit('SET_SAVING', false);
+                this.isSaving = false;
             }
         },
     },

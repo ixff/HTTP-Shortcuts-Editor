@@ -4,58 +4,60 @@
             :id="id"
             ref="input"
             class="input__value"
+            :value="modelValue"
             v-bind="$attrs"
-            @input="onInput"
+            @change="onChange"
         >
             <option
                 v-for="option in options"
                 :key="option.value"
-                :selected="option.value === value"
                 :value="option.value"
             >{{ option.label }}</option>
         </select>
     </labelled>
 </template>
 
-<script>
-import { v4 as uuidv4 } from 'uuid';
+<script lang="ts">
+export default {
+    inheritAttrs: false,
+};
+</script>
+
+<script setup lang="ts">
+import { ref } from 'vue';
 import Labelled from '@/components/form/Labelled.vue';
 
-export default {
-    components: {
-        Labelled,
-    },
-    props: {
-        label: {
-            type: String,
-            default: null,
-        },
-        value: {
-            type: String,
-            default: null,
-        },
-        options: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            id: null,
-        };
-    },
-    mounted() {
-        this.id = uuidv4();
-    },
-    methods: {
-        focus() {
-            this.$refs.input.focus();
-        },
-        onInput(event) {
-            this.$emit('input', event.target.options[event.target.selectedIndex].value);
-        },
-    },
-};
+export interface SelectOption {
+    value: string;
+    label: string;
+}
+
+withDefaults(defineProps<{
+    label?: string | null;
+    modelValue?: string | null;
+    options: SelectOption[];
+}>(), {
+    label: null,
+    modelValue: null,
+});
+
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: string): void;
+}>();
+
+const input = ref<HTMLSelectElement | null>(null);
+
+function onChange(event: Event) {
+    emit('update:modelValue', (event.target as HTMLSelectElement).value);
+}
+
+function focus() {
+    input.value?.focus();
+}
+
+defineExpose({
+    focus,
+});
 </script>
 
 <style lang="sass" scoped>

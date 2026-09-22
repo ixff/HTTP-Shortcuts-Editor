@@ -33,53 +33,43 @@
     </page>
 </template>
 
-<script>
-import { mapState, mapActions } from 'vuex';
-
-import Vue from 'vue';
-import Notice from '@/components/basic/Notice.vue';
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import InitForm from '@/components/InitForm.vue';
+import Notice from '@/components/basic/Notice.vue';
 import Page from '@/views/Page.vue';
 import ApiError from '@/store/errors/ApiError';
 import ValidationError from '@/store/errors/ValidationError';
+import { useStore } from '@/store';
 
-export default Vue.extend({
-    components: {
-        InitForm,
-        Notice,
-        Page,
-    },
-    computed: {
-        ...mapState(['isLoading', 'deviceId']),
-    },
-    data() {
-        return {
-            error: '',
-        };
-    },
-    methods: {
-        ...mapActions(['setCredentials', 'loadData']),
-        async onSubmit({ deviceId, password }) {
-            this.setCredentials({ deviceId, password });
-            try {
-                await this.loadData();
-                await this.$router.push('/edit');
-            } catch (e) {
-                if (e instanceof ValidationError) {
-                    this.error = e.message;
-                } else if (e instanceof ApiError) {
-                    this.error = 'Incorrect device ID or password, or shortcuts were not pushed from app';
-                } else {
-                    this.error = 'Failed to open editor. Please try again';
-                    console.log(e);
-                }
-            }
-        },
-        clearError() {
-            this.error = '';
-        },
-    },
-});
+const store = useStore();
+const router = useRouter();
+const { isLoading, deviceId } = storeToRefs(store);
+
+const error = ref('');
+
+async function onSubmit({ deviceId: id, password }: { deviceId: string; password: string }) {
+    store.setCredentials(id, password);
+    try {
+        await store.loadData();
+        await router.push('/edit');
+    } catch (e) {
+        if (e instanceof ValidationError) {
+            error.value = e.message;
+        } else if (e instanceof ApiError) {
+            error.value = 'Incorrect device ID or password, or shortcuts were not pushed from app';
+        } else {
+            error.value = 'Failed to open editor. Please try again';
+            console.log(e);
+        }
+    }
+}
+
+function clearError() {
+    error.value = '';
+}
 </script>
 
 <style lang="sass" scoped>

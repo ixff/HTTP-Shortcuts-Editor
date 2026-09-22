@@ -2,19 +2,20 @@
     <div class="parameter-list">
         <draggable
             v-model="parametersData"
+            item-key="id"
             :group="`parameters${supportsFiles ? '--with-files' : ''}`"
             handle=".parameter__header__drag-handle"
         >
-            <parameter
-                v-for="parameter in parametersData"
-                :key="parameter.id"
-                :parameter="parameter"
-                :variables="variables"
-                class="parameter-list__item"
-                @update:parameter="onUpdate"
-                @delete="onDelete"
-            />
-            <template slot="footer">
+            <template #item="{ element }">
+                <parameter
+                    :parameter="element"
+                    :variables="variables"
+                    class="parameter-list__item"
+                    @update:parameter="onUpdate"
+                    @delete="onDelete"
+                />
+            </template>
+            <template #footer>
                 <div v-if="parametersData.length === 0" class="empty-state">
                     No parameters defined
                 </div>
@@ -30,76 +31,73 @@
     </div>
 </template>
 
-<script>
-import Vue from 'vue';
-import Parameter from '@/components/shortcuts/parameters/Parameter.vue';
-import ParameterTypePicker from '@/components/shortcuts/parameters/ParameterTypePicker.vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 import draggable from 'vuedraggable';
+import Parameter from '@/components/shortcuts/parameters/Parameter.vue';
 import StyledButton from '@/components/basic/StyledButton.vue';
-import { createNewParameter, ParameterType } from '@/model';
+import { createNewParameter, ParameterType, type Parameter as ParameterModel } from '@/model';
+import { useDialog } from '@/composables/dialog';
 
-const DIALOG_NAME = 'parameter-type-picker';
+const props = withDefaults(defineProps<{
+    parameters: ParameterModel[];
+    variables: any[];
+    supportsFiles?: boolean;
+}>(), {
+    supportsFiles: false,
+});
 
-export default {
-    components: {
-        Parameter,
-        draggable,
-        StyledButton,
-    },
-    props: {
-        parameters: {
-            type: Array,
-            required: true,
-        },
-        variables: {
-            type: Array,
-            required: true,
-        },
-        supportsFiles: {
-            type: Boolean,
-        },
-    },
-    data() {
-        return {
-            parametersData: [...this.parameters],
-        };
-    },
-    watch: {
-        parametersData(newData) {
-            this.$emit('update:parameters', newData);
-        },
-    },
-    created() {
-        Vue.dialog.registerComponent(DIALOG_NAME, ParameterTypePicker);
-    },
-    methods: {
-        onUpdate(parameter) {
-            this.parametersData = this.parametersData.map(
-                (s) => (s.id === parameter.id ? parameter : s),
-            );
-        },
-        onDelete(parameter) {
-            this.parametersData = this.parametersData.filter((s) => s.id !== parameter.id);
-        },
-        async addNewParameter() {
-            if (this.supportsFiles) {
-                try {
-                    const choice = await this.$dialog.confirm('', {
-                        view: DIALOG_NAME,
-                        html: true,
-                        animation: 'fade',
-                        backdropClose: true,
-                    });
-                    this.parametersData.push(createNewParameter(choice.data.type));
-                } catch (e) {
-                    // cancelled
-                }
-            } else {
-                this.parametersData.push(createNewParameter(ParameterType.STRING));
-            }
-        },
-    },
-};
+const emit = defineEmits<{
+    (e: 'update:parameters', parameters: ParameterModel[]): void;
+}>();
+
+const parametersData = ref<ParameterModel[]>([...props.parameters]);
+const dialog = useDialog();
+
+watch(parametersData, (newData) => {
+    emit('update:parameters', newData);
+}, { deep: true });
+
+function onUpdate(parameter: ParameterModel) {
+    parametersData.value = parametersData.value.map(
+        (p) => (p.id === parameter.id ? parameter : p),
+    );
+}
+
+function onDelete(parameter: ParameterModel) {
+    parametersData.value = parametersData.value.filter((p) => p.id !== parameter.id);
+}
+
+async function addNewParameter() {
+    if (props.supportsFiles) {
+        try {
+            const choice = await dialog.select<{ type: ParameterType }>({
+                title: 'Add New Parameter',
+                options: [
+                    {
+                        type: ParameterType.STRING,
+                        label: 'String (default)',
+                    },
+                    {
+                        type: ParameterType.FILE,
+                        label: 'Single File',
+                    },
+                    {
+                        type: ParameterType.FILES,
+                        label: 'Multiple Files',
+                    },
+                ],
+                getOptionLabel: (option: { type: ParameterType; label: string }) => option.label,
+                getOptionId: (option: { type: ParameterType }) => option.type,
+            });
+            parametersData.value.push(createNewParameter(choice.type));
+        } catch (e) {
+            // cancelled
+        }
+    } else {
+        parametersData.value.push(createNewParameter(ParameterType.STRING));
+    }
+}
 </script>
 
 <style lang="sass" scoped>

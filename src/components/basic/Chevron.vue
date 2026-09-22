@@ -2,17 +2,10 @@
     <icon :name="expanded ? 'chevron-down' : 'chevron-right'"/>
 </template>
 
-<script>
+<script setup lang="ts">
 import Icon from '@/components/basic/Icon.vue';
 
-export default {
-    components: {
-        Icon,
-    },
-    props: {
-        expanded: {
-            type: Boolean,
-        },
-    },
-};
+defineProps<{
+    expanded?: boolean;
+}>();
 </script>

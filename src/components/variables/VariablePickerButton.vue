@@ -7,46 +7,35 @@
     />
 </template>
 
-<script>
-import Vue from 'vue';
+<script setup lang="ts">
 import Icon from '@/components/basic/Icon.vue';
-import VariablePickerDialog from '@/components/variables/VariablePickerDialog.vue';
+import { useDialog } from '@/composables/dialog';
+import type { Variable } from '@/model';
 
-const DIALOG_NAME = 'variable-picker';
+const props = defineProps<{
+    variables: Variable[];
+}>();
 
-export default {
-    components: {
-        Icon,
-    },
-    props: {
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    created() {
-        Vue.dialog.registerComponent(DIALOG_NAME, VariablePickerDialog);
-    },
-    methods: {
-        async openPicker() {
-            try {
-                const choice = await this.$dialog.confirm('', {
-                    view: DIALOG_NAME,
-                    html: true,
-                    animation: 'fade',
-                    backdropClose: true,
-                    variables: this.variables.filter((v) => v.key.length > 0),
-                });
-                this.onVariablePicked(choice.data);
-            } catch (e) {
-                // cancelled
-            }
-        },
-        onVariablePicked(variable) {
-            this.$emit('variable-picked', variable);
-        },
-    },
-};
+const emit = defineEmits<{
+    (e: 'variable-picked', variable: Variable): void;
+}>();
+
+const dialog = useDialog();
+
+async function openPicker() {
+    try {
+        const choice = await dialog.select<Variable>({
+            title: 'Insert Variable',
+            options: props.variables.filter((v) => v.key.length > 0),
+            getOptionLabel: (option: Variable) => option.key,
+            emptyText: `You don't have any variables yet. Scroll to the bottom of the page to find the
+            button to create variables.`,
+        });
+        emit('variable-picked', choice);
+    } catch (e) {
+        // cancelled
+    }
+}
 </script>
 
 <style lang="sass" scoped>

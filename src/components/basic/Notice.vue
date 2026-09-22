@@ -4,11 +4,6 @@
     </div>
 </template>
 
-<script>
-export default {
-};
-</script>
-
 <style lang="sass" scoped>
 .notice
     background: #fafafa

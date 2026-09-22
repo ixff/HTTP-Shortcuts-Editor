@@ -1,6 +1,6 @@
 <template>
     <page v-if="data" class="editor">
-        <template #header class="editor__header">
+        <template #header>
             <div
                 :class="[
                     'editor__header__save',
@@ -16,7 +16,7 @@
                 {'editor__header__saving--visible': isSaving}
             ]">Saving...</span>
         </template>
-        <template #main class="editor__main">
+        <template #main>
             <div class="editor__main_section-title">Categories</div>
             <category-list
                 :categories="data.categories"
@@ -40,91 +40,82 @@
     </page>
 </template>
 
-<script>
-import { mapState, mapActions, mapGetters } from 'vuex';
-
-import Vue from 'vue';
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { onBeforeUnmount, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import CategoryList from '@/components/categories/CategoryList.vue';
 import GlobalSettingsForm from '@/components/global/GlobalSettingsForm.vue';
-import Page from '@/views/Page.vue';
-import ValidationError from '@/store/errors/ValidationError';
 import VariableList from '@/components/variables/VariableList.vue';
+import Page from '@/views/Page.vue';
+import { useDialog } from '@/composables/dialog';
+import ValidationError from '@/store/errors/ValidationError';
+import { useStore } from '@/store';
+import type { Base } from '@/model';
 
-export default Vue.extend({
-    components: {
-        CategoryList,
-        GlobalSettingsForm,
-        Page,
-        VariableList,
-    },
-    computed: {
-        ...mapState([
-            'data',
-            'hasUnsavedChanges',
-            'isSaving',
-        ]),
-        ...mapGetters([
-            'isLoaded',
-        ]),
-    },
-    async mounted() {
-        if (this.isLoaded) {
-            this.registerOnUnload();
-        } else {
-            await this.$router.replace('/');
-        }
-    },
-    methods: {
-        ...mapActions([
-            'setData',
-            'saveData',
-        ]),
-        registerOnUnload() {
-            window.addEventListener('beforeunload', (e) => {
-                if (!this.hasUnsavedChanges) {
-                    return undefined;
-                }
-                const message = 'You have unsaved changes. '
-                    + 'Are you sure you want to leave and discard them?';
-                e.returnValue = message;
-                return message;
-            });
-        },
-        onUpdateCategories(categories) {
-            this.setData({
-                ...this.data,
-                categories,
-            });
-        },
-        onUpdateVariables(variables) {
-            this.setData({
-                ...this.data,
-                variables,
-            });
-        },
-        onUpdateBase(base) {
-            this.setData({
-                ...this.data,
-                title: base.title,
-                globalCode: base.globalCode,
-            });
-        },
-        async onSave() {
-            if (!this.hasUnsavedChanges || this.isSaving) {
-                return;
-            }
-            try {
-                await this.saveData();
-            } catch (e) {
-                if (e instanceof ValidationError) {
-                    this.$dialog.alert(e.message);
-                } else {
-                    this.$dialog.alert('An error occurred while trying to save your changes. Please try again.');
-                }
-            }
-        },
-    },
+const store = useStore();
+const router = useRouter();
+const dialog = useDialog();
+const { data, hasUnsavedChanges, isSaving, isLoaded } = storeToRefs(store);
+
+function onBeforeUnload(event: BeforeUnloadEvent) {
+    if (!hasUnsavedChanges.value) {
+        return undefined;
+    }
+    const message = 'You have unsaved changes. '
+        + 'Are you sure you want to leave and discard them?';
+    event.returnValue = message;
+    return message;
+}
+
+onMounted(async () => {
+    if (isLoaded.value) {
+        window.addEventListener('beforeunload', onBeforeUnload);
+    } else {
+        await router.replace('/');
+    }
 });
+
+onBeforeUnmount(() => {
+    window.removeEventListener('beforeunload', onBeforeUnload);
+});
+
+function onUpdateCategories(categories: Base['categories']) {
+    store.setData({
+        ...data.value as Base,
+        categories,
+    });
+}
+
+function onUpdateVariables(variables: Base['variables']) {
+    store.setData({
+        ...data.value as Base,
+        variables,
+    });
+}
+
+function onUpdateBase(base: Base) {
+    store.setData({
+        ...data.value as Base,
+        title: base.title,
+        globalCode: base.globalCode,
+    });
+}
+
+async function onSave() {
+    if (!hasUnsavedChanges.value || isSaving.value) {
+        return;
+    }
+    try {
+        await store.saveData();
+    } catch (e) {
+        if (e instanceof ValidationError) {
+            await dialog.alert(e.message);
+        } else {
+            await dialog.alert('An error occurred while trying to save your changes. Please try again.');
+        }
+    }
+}
 </script>
 
 <style lang="sass" scoped>

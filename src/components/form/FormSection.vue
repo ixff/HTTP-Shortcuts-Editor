@@ -8,15 +8,10 @@
     </div>
 </template>
 
-<script>
-export default {
-    props: {
-        title: {
-            type: String,
-            required: true,
-        },
-    },
-};
+<script setup lang="ts">
+defineProps<{
+    title: string;
+}>();
 </script>
 
 <style lang="sass" scoped>

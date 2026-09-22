@@ -21,7 +21,6 @@
         </div>
         <div v-if="expanded" class="variable__form">
             <text-input
-                ref="keyInput"
                 v-model="variableData.key"
                 label="Name"
                 placeholder="Enter the name for this variable"
@@ -30,15 +29,16 @@
             <with-variable-picker
                 v-if="variableData.type === VariableType.CONSTANT"
                 :variables="variables"
-                @insert-text="(text) => this.$refs.valueInput.insertAtCursor(text)"
+                @insert-text="(text) => valueInput?.insertAtCursor(text)"
             >
                 <text-input
                     ref="valueInput"
-                    v-model="variableData.value"
+                    :model-value="variableData.value ?? ''"
                     label="Value"
                     maxlength="30000"
                     placeholder="Enter the value for this variable"
                     :multiline="true"
+                    @update:model-value="(value) => variableData.value = value"
                 />
             </with-variable-picker>
 
@@ -52,8 +52,8 @@
                     label="JSON encode"
                 />
                 <checkbox-input
-                    :value="variableData.flags %2 === 1"
-                    @input="(value) => {
+                    :model-value="variableData.flags % 2 === 1"
+                    @update:model-value="(value) => {
                         variableData.flags = (variableData.flags & (~1)) + (value ? 1 : 0);
                     }"
                     label="Allow 'Share…'"
@@ -64,98 +64,78 @@
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import CheckboxInput from '@/components/form/CheckboxInput.vue';
 import Chevron from '@/components/basic/Chevron.vue';
 import FormSection from '@/components/form/FormSection.vue';
 import Icon from '@/components/basic/Icon.vue';
 import TextInput from '@/components/form/TextInput.vue';
 import WithVariablePicker from '@/components/variables/WithVariablePicker.vue';
-import { VariableType } from '@/model';
+import { useDialog } from '@/composables/dialog';
+import { VariableType, type Variable } from '@/model';
 
-export default {
-    components: {
-        CheckboxInput,
-        Chevron,
-        FormSection,
-        Icon,
-        TextInput,
-        WithVariablePicker,
-    },
-    props: {
-        variable: {
-            type: Object,
-            required: true,
-        },
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            expanded: false,
-            variableData: { ...this.variable },
-            VariableType,
-        };
-    },
-    watch: {
-        variableData: {
-            handler(newData) {
-                this.variableData = newData;
-                this.variableData.key = newData.key.replace(/[^A-Za-z0-9_]/g, '');
-                this.$emit('update:variable', this.variableData);
-            },
-            deep: true,
-        },
-    },
-    computed: {
-        variableTitle() {
-            return this.variableData.key.length > 0
-                ? this.variableData.key
-                : '-';
-        },
-        variableType() {
-            switch (this.variableData.type) {
-            case VariableType.TEXT:
-                return 'Text Input';
-            case VariableType.NUMBER:
-                return 'Number Input';
-            case VariableType.PASSWORD:
-                return 'Password Input';
-            case VariableType.SELECT:
-                return 'Multiple Choice Selection';
-            case VariableType.TOGGLE:
-                return 'Toggle';
-            case VariableType.COLOR:
-                return 'Color Input';
-            case VariableType.DATE:
-                return 'Date Input';
-            case VariableType.TIME:
-                return 'Time Input';
-            case VariableType.SLIDER:
-                return 'Number Slider';
-            default:
-                return 'Static Variable';
-            }
-        },
-    },
-    methods: {
-        toggle() {
-            this.expanded = !this.expanded;
-        },
-        async onDeleteClicked() {
-            try {
-                await this.$dialog.confirm('Delete this variable?', {
-                    okText: 'Delete',
-                });
-                this.$emit('delete', this.variableData);
-            } catch (e) {
-                // cancelled
-            }
-        },
-    },
-};
+const props = defineProps<{
+    variable: Variable;
+    variables: Variable[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:variable', variable: Variable): void;
+    (e: 'delete', variable: Variable): void;
+}>();
+
+const expanded = ref(false);
+const variableData = ref<Variable>({ ...props.variable });
+const valueInput = ref<InstanceType<typeof TextInput> | null>(null);
+const dialog = useDialog();
+
+watch(variableData, (newData) => {
+    newData.key = newData.key.replace(/[^A-Za-z0-9_]/g, '');
+    emit('update:variable', newData);
+}, { deep: true });
+
+const variableTitle = computed(() => (variableData.value.key.length > 0
+    ? variableData.value.key
+    : '-'));
+
+const variableType = computed(() => {
+    switch (variableData.value.type) {
+    case VariableType.TEXT:
+        return 'Text Input';
+    case VariableType.NUMBER:
+        return 'Number Input';
+    case VariableType.PASSWORD:
+        return 'Password Input';
+    case VariableType.SELECT:
+        return 'Multiple Choice Selection';
+    case VariableType.TOGGLE:
+        return 'Toggle';
+    case VariableType.COLOR:
+        return 'Color Input';
+    case VariableType.DATE:
+        return 'Date Input';
+    case VariableType.TIME:
+        return 'Time Input';
+    case VariableType.SLIDER:
+        return 'Number Slider';
+    default:
+        return 'Static Variable';
+    }
+});
+
+function toggle() {
+    expanded.value = !expanded.value;
+}
+
+async function onDeleteClicked() {
+    try {
+        await dialog.confirm('Delete this variable?', { okText: 'Delete' });
+        emit('delete', variableData.value);
+    } catch (e) {
+        // cancelled
+    }
+}
 </script>
 
 <style lang="sass" scoped>

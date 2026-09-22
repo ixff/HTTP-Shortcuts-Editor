@@ -19,7 +19,7 @@
         <div v-if="expanded" class="header__form">
             <with-variable-picker
                 :variables="variables"
-                @insert-text="(text) => this.$refs.keyInput.insertAtCursor(text)"
+                @insert-text="(text) => keyInput?.insertAtCursor(text)"
             >
                 <text-input
                     ref="keyInput"
@@ -30,7 +30,7 @@
             </with-variable-picker>
             <with-variable-picker
                 :variables="variables"
-                @insert-text="(text) => this.$refs.valueInput.insertAtCursor(text)"
+                @insert-text="(text) => valueInput?.insertAtCursor(text)"
             >
                 <text-input
                     ref="valueInput"
@@ -43,66 +43,51 @@
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import Chevron from '@/components/basic/Chevron.vue';
 import Icon from '@/components/basic/Icon.vue';
 import TextInput from '@/components/form/TextInput.vue';
 import WithVariablePicker from '@/components/variables/WithVariablePicker.vue';
+import { useDialog } from '@/composables/dialog';
+import type { Header, Variable } from '@/model';
 
-export default {
-    components: {
-        Chevron,
-        Icon,
-        TextInput,
-        WithVariablePicker,
-    },
-    props: {
-        header: {
-            type: Object,
-            required: true,
-        },
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            expanded: false,
-            headerData: { ...this.header },
-        };
-    },
-    watch: {
-        headerData: {
-            handler(newData) {
-                this.$emit('update:header', newData);
-            },
-            deep: true,
-        },
-    },
-    computed: {
-        headerTitle() {
-            return this.headerData.key.length > 0
-                ? `${this.headerData.key}: ${this.headerData.value}`
-                : '-';
-        },
-    },
-    methods: {
-        toggle() {
-            this.expanded = !this.expanded;
-        },
-        async onDeleteClicked() {
-            try {
-                await this.$dialog.confirm('Delete this header?', {
-                    okText: 'Delete',
-                });
-                this.$emit('delete', this.headerData);
-            } catch (e) {
-                // cancelled
-            }
-        },
-    },
-};
+const props = defineProps<{
+    header: Header;
+    variables: Variable[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:header', header: Header): void;
+    (e: 'delete', header: Header): void;
+}>();
+
+const expanded = ref(false);
+const headerData = ref<Header>({ ...props.header });
+const keyInput = ref<InstanceType<typeof TextInput> | null>(null);
+const valueInput = ref<InstanceType<typeof TextInput> | null>(null);
+const dialog = useDialog();
+
+watch(headerData, (newData) => {
+    emit('update:header', newData);
+}, { deep: true });
+
+const headerTitle = computed(() => (headerData.value.key.length > 0
+    ? `${headerData.value.key}: ${headerData.value.value}`
+    : '-'));
+
+function toggle() {
+    expanded.value = !expanded.value;
+}
+
+async function onDeleteClicked() {
+    try {
+        await dialog.confirm('Delete this header?', { okText: 'Delete' });
+        emit('delete', headerData.value);
+    } catch (e) {
+        // cancelled
+    }
+}
 </script>
 
 <style lang="sass" scoped>

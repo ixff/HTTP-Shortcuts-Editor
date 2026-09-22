@@ -9,26 +9,23 @@
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import VariablePickerButton from '@/components/variables/VariablePickerButton.vue';
+import type { Variable } from '@/model';
 
-export default {
-    components: {
-        VariablePickerButton,
-    },
-    props: {
-        variables: {
-            type: Array,
-            required: true,
-        },
-    },
-    methods: {
-        onVariablePicked(variable) {
-            this.$emit('variable-picked', variable);
-            this.$emit('insert-text', `{{{${variable.key}}}}`);
-        },
-    },
-};
+const props = defineProps<{
+    variables: Variable[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'variable-picked', variable: Variable): void;
+    (e: 'insert-text', text: string): void;
+}>();
+
+function onVariablePicked(variable: Variable) {
+    emit('variable-picked', variable);
+    emit('insert-text', `{{{${variable.key}}}}`);
+}
 </script>
 
 <style lang="sass" scoped>
