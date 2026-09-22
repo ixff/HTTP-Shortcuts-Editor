@@ -87,6 +87,23 @@ export async function cleanupExpiredFiles(
     }
 }
 
+/**
+ * Probes the store directory by writing and deleting a throw-away file.
+ * Returns false when uploads would fail with EACCES/EROFS (e.g. a mounted
+ * volume that is not writable by the user the server runs as).
+ */
+export async function checkStoreWritable(storeDir: string = DEFAULT_STORE_DIR): Promise<boolean> {
+    const probePath = path.join(storeDir, '.write-probe');
+    try {
+        await mkdir(storeDir, { recursive: true });
+        await writeFile(probePath, '');
+        await unlink(probePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export function createApp(config: AppConfig = {}): Hono {
     const storeDir = config.storeDir ?? DEFAULT_STORE_DIR;
     const distDir = config.distDir ?? DEFAULT_DIST_DIR;
@@ -117,7 +134,15 @@ export function createApp(config: AppConfig = {}): Hono {
         }
         if (method === 'POST') {
             const body = Buffer.from(await c.req.arrayBuffer());
-            await writeFile(filePath, body);
+            try {
+                await writeFile(filePath, body);
+            } catch (error) {
+                // Typically EACCES/EROFS when a mounted store directory is not
+                // writable by the server user; answer with JSON instead of a
+                // raw stack trace so the app can surface a clear message.
+                console.error(`Failed to write store file ${filePath}:`, error);
+                return c.json({ error: 'write failed' }, 500);
+            }
             return c.json({ status: 'ok' });
         }
         return c.json({ error: 'method not allowed' }, 405);

@@ -1,0 +1,4 @@
+# Shell scripts must stay LF, otherwise the container fails with
+# "exec format error" / "$'\r': command not found" when running the
+# entrypoint on Linux.
+*.sh text eol=lf

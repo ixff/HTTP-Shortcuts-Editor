@@ -45,15 +45,23 @@ docker run --name http-shortcuts-editor -p 3000:3000 -v hse-store:/app/server/st
 
 The editor is then available at `http://localhost:3000/editor/`. The volume at `/app/server/store` persists the temporary JSON files that the app pushes to the editor (omit the `-v` flag if you don't need persistence). Use `-e PORT=...` to change the listening port.
 
-The image runs its server as the non-root `node` user (uid/gid 1000). Named volumes work out of the box. When bind-mounting a host directory instead, first make it writable for that user:
+The image starts its entrypoint as root, repairs the ownership of a mounted
+`/app/server/store` (this fixes `EACCES` on volumes that were created by an
+earlier root-owned run), then drops to the unprivileged `node` user
+(uid/gid 1000) before launching the server. So named volumes and bind mounts
+work out of the box. Options:
+
+- `-e HSE_KEEP_ROOT=1` – stay root (handy when the host deployment itself runs as root)
+- `--user 1000:1000` – skip the ownership repair entirely (the directory must already be writable)
+- `-e PORT=...` – change the listening port
+
+If the store directory is still not writable, the server logs a warning at
+startup and answers saves with `500 {"error":"write failed"}` instead of
+crashing. You can repair a named volume manually with:
 
 ```sh
-mkdir -p /data/hse-store
-chown -R 1000:1000 /data/hse-store
-docker run --name http-shortcuts-editor -p 3000:3000 -v /data/hse-store:/app/server/store http-shortcuts-editor
+docker run --rm -v hse-store:/store alpine chown -R 1000:1000 /store
 ```
-
-Alternatively run the container as root with `--user 0:0` (handy when the host deployment itself runs as root), or use `chmod 777` on the directory if you don't want to change its owner.
 
 ### API Server
 
