@@ -40,10 +40,20 @@ The multi-stage [Dockerfile](Dockerfile) builds the web app and packages it toge
 
 ```sh
 docker build -t http-shortcuts-editor .
-docker run -p 3000:3000 -v hse-store:/app/server/store http-shortcuts-editor
+docker run --name http-shortcuts-editor -p 3000:3000 -v hse-store:/app/server/store http-shortcuts-editor
 ```
 
 The editor is then available at `http://localhost:3000/editor/`. The volume at `/app/server/store` persists the temporary JSON files that the app pushes to the editor (omit the `-v` flag if you don't need persistence). Use `-e PORT=...` to change the listening port.
+
+The image runs its server as the non-root `node` user (uid/gid 1000). Named volumes work out of the box. When bind-mounting a host directory instead, first make it writable for that user:
+
+```sh
+mkdir -p /data/hse-store
+chown -R 1000:1000 /data/hse-store
+docker run --name http-shortcuts-editor -p 3000:3000 -v /data/hse-store:/app/server/store http-shortcuts-editor
+```
+
+Alternatively run the container as root with `--user 0:0` (handy when the host deployment itself runs as root), or use `chmod 777` on the directory if you don't want to change its owner.
 
 ### API Server
 

@@ -30,7 +30,7 @@ COPY server ./server
 # The backend writes temp JSON files into server/store; run as the non-root
 # "node" user shipped with the base image. Mount a volume at /app/server/store
 # to persist (or inspect) the stored data:
-#   docker run -p 3000:3000 -v hse-store:/app/server/store <image>
+#   docker run --name http-shortcuts-editor -p 3000:3000 -v hse-store:/app/server/store <image>
 RUN mkdir -p server/store && chown -R node:node /app
 USER node
 
