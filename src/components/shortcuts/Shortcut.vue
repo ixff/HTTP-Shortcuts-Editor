@@ -252,55 +252,53 @@
                 <template #header>
                     See the <a href="https://http-shortcuts.rmy.ch/scripting" target="_blank">Scripting documentation</a> for more information.
                 </template>
-                <template>
-                    <with-variable-picker
-                        :variables="variables"
-                        @variable-picked="
-                            (variable) => scriptPrepareInput?.insertVariable(variable)
+                <with-variable-picker
+                    :variables="variables"
+                    @variable-picked="
+                        (variable) => scriptPrepareInput?.insertVariable(variable)
+                    "
+                >
+                    <script-input
+                        ref="scriptPrepareInput"
+                        v-model="shortcutData.codeOnPrepare"
+                        label="Run before Execution"
+                        :placeholder="
+                            isScriptingShortcut
+                            ? 'Add JavaScript code here'
+                            : 'Add JavaScript code here to run before the shortcut is ' +
+                             'executed, e.g., to prepare some variables.'
                         "
-                    >
-                        <script-input
-                            ref="scriptPrepareInput"
-                            v-model="shortcutData.codeOnPrepare"
-                            label="Run before Execution"
-                            :placeholder="
-                                isScriptingShortcut
-                                ? 'Add JavaScript code here'
-                                : 'Add JavaScript code here to run before the shortcut is ' +
-                                 'executed, e.g., to prepare some variables.'
-                            "
-                        />
-                    </with-variable-picker>
-                    <with-variable-picker
-                        v-if="usesScriptingOnSuccess"
-                        :variables="variables"
-                        @variable-picked="
-                            (variable) => scriptSuccessInput?.insertVariable(variable)
-                        "
-                    >
-                        <script-input
-                            ref="scriptSuccessInput"
-                            v-model="shortcutData.codeOnSuccess"
-                            label="Run after Execution"
-                            :placeholder="'Add JavaScript code here to run after the shortcut is ' +
-                                'executed, e.g., to process the response.'"
-                        />
-                    </with-variable-picker>
-                    <with-variable-picker
-                        v-if="usesScriptingOnFailure"
-                        :variables="variables"
-                        @variable-picked="
-                            (variable) => scriptFailureInput?.insertVariable(variable)
-                        "
-                    >
-                        <script-input
-                            ref="scriptFailureInput"
-                            v-model="shortcutData.codeOnFailure"
-                            label="Run on Failure"
-                            placeholder="Add JavaScript code here to run in case the request fails."
-                        />
-                    </with-variable-picker>
-                </template>
+                    />
+                </with-variable-picker>
+                <with-variable-picker
+                    v-if="usesScriptingOnSuccess"
+                    :variables="variables"
+                    @variable-picked="
+                        (variable) => scriptSuccessInput?.insertVariable(variable)
+                    "
+                >
+                    <script-input
+                        ref="scriptSuccessInput"
+                        v-model="shortcutData.codeOnSuccess"
+                        label="Run after Execution"
+                        :placeholder="'Add JavaScript code here to run after the shortcut is ' +
+                            'executed, e.g., to process the response.'"
+                    />
+                </with-variable-picker>
+                <with-variable-picker
+                    v-if="usesScriptingOnFailure"
+                    :variables="variables"
+                    @variable-picked="
+                        (variable) => scriptFailureInput?.insertVariable(variable)
+                    "
+                >
+                    <script-input
+                        ref="scriptFailureInput"
+                        v-model="shortcutData.codeOnFailure"
+                        label="Run on Failure"
+                        placeholder="Add JavaScript code here to run in case the request fails."
+                    />
+                </with-variable-picker>
                 <!-- TODO: Code Snippet Picker -->
             </form-section>
 
