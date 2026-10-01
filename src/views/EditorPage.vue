@@ -1,5 +1,7 @@
 <template>
-    <page v-if="data" class="editor">
+    <!-- dataRevision changes on every pull from the server, remounting all
+         children so their local prop copies are re-initialized -->
+    <page v-if="data" :key="dataRevision" class="editor">
         <template #header>
             <div
                 :class="[
@@ -69,7 +71,7 @@ import type { Base } from '@/model';
 const store = useStore();
 const router = useRouter();
 const dialog = useDialog();
-const { data, hasUnsavedChanges, isSaving, isLoading, isLoaded } = storeToRefs(store);
+const { data, hasUnsavedChanges, isSaving, isLoading, isLoaded, dataRevision } = storeToRefs(store);
 
 function onBeforeUnload(event: BeforeUnloadEvent) {
     if (!hasUnsavedChanges.value) {

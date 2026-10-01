@@ -202,6 +202,12 @@ export const useStore = defineStore('main', {
         isLoading: false,
         isSaving: false,
         hasUnsavedChanges: false,
+        /**
+         * Incremented whenever fresh data is pulled from the server. Used as a
+         * remount key by the editor so that components which copy their props
+         * into local state (all list/form components) pick up the new data.
+         */
+        dataRevision: 0,
     }),
     getters: {
         isLoaded(state): boolean {
@@ -228,6 +234,8 @@ export const useStore = defineStore('main', {
 
                 this.data = replaceVariablePlaceholdersWithKeys(normalize(data));
                 this.hasUnsavedChanges = false;
+                // Force the editor UI to remount from the fresh props
+                this.dataRevision++;
             } finally {
                 this.isLoading = false;
             }
